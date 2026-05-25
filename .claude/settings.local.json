@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p /Users/mormordechay/nextage-dlp-addin-v3/design/mockups /Users/mormordechay/nextage-dlp-addin-v3/design/wireframes /Users/mormordechay/nextage-dlp-addin-v3/design/assets)",
+      "Bash(touch /Users/mormordechay/nextage-dlp-addin-v3/design/mockups/.gitkeep /Users/mormordechay/nextage-dlp-addin-v3/design/wireframes/.gitkeep /Users/mormordechay/nextage-dlp-addin-v3/design/assets/.gitkeep)",
+      "Bash(grep -rEn \"\\(api_key|secret|password|token\\)\\\\s*=\\\\s*['\\\\\"][^'\\\\\"]{8,}\" /Users/mormordechay/nextage-dlp-addin-v3/src /Users/mormordechay/nextage-dlp-addin-v3/api /Users/mormordechay/nextage-dlp-addin-v3/scripts /Users/mormordechay/nextage-dlp-addin-v3/terraform)",
+      "Bash(grep -rE \"\\(api_key|secret|password|token|client_secret\\)\\\\s*[=:]\\\\s*['\\\\\"][^'\\\\\"]{8,}\" /Users/mormordechay/nextage-dlp-addin-v3/src /Users/mormordechay/nextage-dlp-addin-v3/api /Users/mormordechay/nextage-dlp-addin-v3/terraform /Users/mormordechay/nextage-dlp-addin-v3/scripts)",
+      "Bash(npm install *)",
+      "Bash(npm test *)",
+      "Bash(SWA_HOSTNAME=nextage-dlp-addin.azurestaticapps.net FUNCTIONS_HOSTNAME=nextage-dlp-api.azurewebsites.net ENTRA_APP_CLIENT_ID=00000000-1111-2222-3333-444444444444 MANIFEST_GUID=55555555-6666-7777-8888-999999999999 npm run build)",
+      "Bash(grep -RE \"REPLACE-WITH-|\\\\\\\\\\\\$\\\\\\\\{\" dist/manifest.json dist/manifest-legacy.xml)",
+      "Bash(echo \"exit=$?\")",
+      "Bash(npm run *)",
+      "Bash(npm start *)",
+      "Bash(curl -ks -o /dev/null -w \"%{http_code} %{url_effective}\\\\n\" https://localhost:3000/taskpane.html)",
+      "Bash(curl -ks -o /dev/null -w \"%{http_code} %{url_effective}\\\\n\" https://localhost:3000/)",
+      "Bash(lsof -nP -iTCP:3000 -sTCP:LISTEN)",
+      "Bash(curl -ks https://localhost:3000/taskpane.html)",
+      "Bash(kill 47818)",
+      "Bash(curl -ksf https://localhost:3000/taskpane.html)",
+      "Bash(pandoc --version)",
+      "Bash(python3 -c \"import docx; print\\(docx.__version__\\)\")",
+      "Bash(pip3 install *)",
+      "Bash(python3 scripts/build-docx.py)",
+      "Bash(extract-text Nextage_DLP_Azure_Deployment.docx)",
+      "Bash(pandoc Nextage_DLP_Azure_Deployment.docx -t markdown)",
+      "Bash(python3 -c ' *)"
+    ]
+  }
+}

@@ -1,0 +1,217 @@
+# Azure DevOps Pipeline - Nextage DLP Add-in v3
+# Builds the add-in + API, runs tests, deploys to Azure Static Web Apps + Azure Functions.
+#
+# Prerequisites (Azure DevOps Project → Pipelines → Library):
+#   Variable Group: "nextage-dlp-prod"
+#     - AZURE_STATIC_WEB_APPS_API_TOKEN  (secret)    — terraform output static_web_app_deployment_token
+#     - AZURE_FUNCTIONS_URL              (plain)     — terraform output function_app_url
+#     - SWA_HOSTNAME                     (plain)     — manifest_tokens.SWA_HOSTNAME
+#     - FUNCTIONS_HOSTNAME               (plain)     — manifest_tokens.FUNCTIONS_HOSTNAME
+#     - ENTRA_APP_CLIENT_ID              (plain)     — manifest_tokens.ENTRA_APP_CLIENT_ID
+#     - MANIFEST_GUID                    (plain)     — manifest_tokens.MANIFEST_GUID
+#     - FUNCTION_APP_NAME                (plain)     — terraform output function_app_name
+#   Service Connection:
+#     - "nextage-azure-prod" (Azure Resource Manager, scoped to the deploy RG)
+#   Environments (require approval to deploy):
+#     - "production-addin"
+#     - "production-api"
+
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    exclude:
+      - "**/*.md"
+      - "docs/**"
+
+pr:
+  branches:
+    include:
+      - main
+
+variables:
+  - group: nextage-dlp-prod
+  - name: nodeVersion
+    value: "20.x"
+  - name: addinBuildDir
+    value: "$(System.DefaultWorkingDirectory)/dist"
+  - name: apiBuildDir
+    value: "$(System.DefaultWorkingDirectory)/api"
+
+stages:
+  # ============================================================================
+  # Stage 1: Build & Test
+  # ============================================================================
+  - stage: BuildAndTest
+    displayName: "Build and Test"
+    jobs:
+      - job: BuildAddin
+        displayName: "Build Add-in"
+        pool:
+          vmImage: "ubuntu-latest"
+        steps:
+          - task: NodeTool@0
+            displayName: "Install Node.js $(nodeVersion)"
+            inputs:
+              versionSpec: $(nodeVersion)
+
+          - script: npm ci
+            displayName: "npm install (add-in)"
+
+          - script: npm run lint
+            displayName: "Lint"
+
+          - script: npm test -- --coverage
+            displayName: "Unit tests"
+
+          - task: PublishCodeCoverageResults@2
+            displayName: "Publish coverage"
+            inputs:
+              summaryFileLocation: "$(System.DefaultWorkingDirectory)/coverage/lcov.info"
+              pathToSources: "$(System.DefaultWorkingDirectory)/src"
+            condition: succeededOrFailed()
+
+          - script: npm run build
+            displayName: "Build production bundle + manifests"
+            env:
+              AZURE_FUNCTIONS_URL: $(AZURE_FUNCTIONS_URL)
+              SWA_HOSTNAME: $(SWA_HOSTNAME)
+              FUNCTIONS_HOSTNAME: $(FUNCTIONS_HOSTNAME)
+              ENTRA_APP_CLIENT_ID: $(ENTRA_APP_CLIENT_ID)
+              MANIFEST_GUID: $(MANIFEST_GUID)
+
+          # Final guard — fail loudly if any REPLACE-WITH- placeholder slipped through.
+          - script: |
+              set -euo pipefail
+              if grep -RE "REPLACE-WITH-" "$(addinBuildDir)" ; then
+                echo "##vso[task.logissue type=error]Manifest still contains REPLACE-WITH- placeholder"
+                exit 1
+              fi
+              if grep -RE '\$\{[A-Z0-9_]+\}' "$(addinBuildDir)/manifest.json" "$(addinBuildDir)/manifest-legacy.xml" ; then
+                echo "##vso[task.logissue type=error]Manifest still contains an unresolved \${TOKEN}"
+                exit 1
+              fi
+              echo "Manifests look clean."
+            displayName: "Verify no manifest placeholders remain"
+
+          - task: PublishPipelineArtifact@1
+            displayName: "Publish add-in dist/"
+            inputs:
+              targetPath: "$(addinBuildDir)"
+              artifact: "addin-dist"
+              publishLocation: "pipeline"
+
+      - job: BuildApi
+        displayName: "Build Azure Functions API"
+        pool:
+          vmImage: "ubuntu-latest"
+        steps:
+          - task: NodeTool@0
+            displayName: "Install Node.js $(nodeVersion)"
+            inputs:
+              versionSpec: $(nodeVersion)
+
+          - script: npm ci
+            workingDirectory: api
+            displayName: "npm install (api)"
+
+          - script: npm run build
+            workingDirectory: api
+            displayName: "Build API"
+
+          - task: ArchiveFiles@2
+            displayName: "Zip API package"
+            inputs:
+              rootFolderOrFile: "$(apiBuildDir)"
+              includeRootFolder: false
+              archiveType: "zip"
+              archiveFile: "$(Build.ArtifactStagingDirectory)/api.zip"
+              replaceExistingArchive: true
+
+          - task: PublishPipelineArtifact@1
+            displayName: "Publish API package"
+            inputs:
+              targetPath: "$(Build.ArtifactStagingDirectory)/api.zip"
+              artifact: "api-package"
+              publishLocation: "pipeline"
+
+  # ============================================================================
+  # Stage 2: Terraform Plan (PRs and main; apply gated by environment approval)
+  # ============================================================================
+  - stage: Infra
+    displayName: "Terraform Plan"
+    dependsOn: []
+    condition: always()
+    jobs:
+      - job: TerraformPlan
+        displayName: "terraform plan"
+        pool:
+          vmImage: "ubuntu-latest"
+        steps:
+          - task: TerraformInstaller@1
+            inputs:
+              terraformVersion: "1.7.0"
+
+          - script: |
+              cd terraform
+              terraform init -backend=false
+              terraform validate
+              terraform plan -input=false -no-color
+            displayName: "terraform init / validate / plan"
+            env:
+              ARM_USE_OIDC: "true"
+            # Plan is informational on PRs. terraform apply is intentionally
+            # manual — perform via `make apply` on a workstation with state access.
+
+  # ============================================================================
+  # Stage 3: Deploy (main branch only; environments require approval)
+  # ============================================================================
+  - stage: Deploy
+    displayName: "Deploy to Azure"
+    dependsOn:
+      - BuildAndTest
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - deployment: DeployAddin
+        displayName: "Deploy Add-in to Static Web Apps"
+        pool:
+          vmImage: "ubuntu-latest"
+        # Configure an approval check on this environment in Azure DevOps UI
+        # (Pipelines → Environments → production-addin → Approvals & checks).
+        environment: "production-addin"
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - download: current
+                  artifact: addin-dist
+
+                - task: AzureStaticWebApp@0
+                  inputs:
+                    azure_static_web_apps_api_token: $(AZURE_STATIC_WEB_APPS_API_TOKEN)
+                    app_location: "$(Pipeline.Workspace)/addin-dist"
+                    skip_app_build: true
+                    skip_api_build: true
+                    is_static_export: true
+
+      - deployment: DeployApi
+        displayName: "Deploy API to Azure Functions"
+        pool:
+          vmImage: "ubuntu-latest"
+        environment: "production-api"
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - download: current
+                  artifact: api-package
+
+                - task: AzureFunctionApp@2
+                  inputs:
+                    azureSubscription: "nextage-azure-prod"
+                    appType: "functionAppLinux"
+                    appName: "$(FUNCTION_APP_NAME)"
+                    package: "$(Pipeline.Workspace)/api-package/api.zip"
+                    runtimeStack: "NODE|20"
+                    deploymentMethod: "zipDeploy"

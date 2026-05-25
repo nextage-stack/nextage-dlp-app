@@ -1,0 +1,52 @@
+// Helpers shared between Check 1/2/3. Kept here so a new check can reuse them
+// without coupling sibling validator files together.
+
+import { Customer, Exemption, ExemptionType } from "../models/customer.model";
+
+export type Permission = ExemptionType | "STANDARD";
+
+/**
+ * Resolves the user's exemption permission. Returns "STANDARD" if no active
+ * exemption applies. Exemptions with an expired `expiryDate` are ignored.
+ */
+export function getUserPermission(
+  userEmail: string,
+  exemptions: Exemption[],
+  now: Date = new Date(),
+): Permission {
+  const target = userEmail.toLowerCase();
+  const exemption = exemptions.find(
+    (ex) =>
+      ex.userEmail.toLowerCase() === target &&
+      (ex.expiryDate === null || new Date(ex.expiryDate) > now),
+  );
+  return exemption?.exemptionType ?? "STANDARD";
+}
+
+/**
+ * Returns every ACTIVE customer whose primary or additional domain matches a
+ * recipient. De-duplicated by customer id.
+ */
+export function findCustomersInRecipients(
+  recipients: string[],
+  customers: Customer[],
+): Customer[] {
+  const found: Customer[] = [];
+  for (const r of recipients) {
+    const domain = r.split("@")[1]?.toLowerCase();
+    if (!domain) continue;
+
+    for (const c of customers) {
+      if (c.status !== "ACTIVE") continue;
+      const customerDomains = [
+        c.primaryDomain?.toLowerCase(),
+        ...c.additionalDomains.map((d) => d.toLowerCase()),
+      ].filter(Boolean);
+
+      if (customerDomains.includes(domain) && !found.find((f) => f.id === c.id)) {
+        found.push(c);
+      }
+    }
+  }
+  return found;
+}

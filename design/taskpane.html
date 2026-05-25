@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Nextage DLP Guard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --primary: #3525cd;
+      --primary-hover: #2a1eb0;
+      --primary-soft: #f0eefe;
+      --surface: #f7f9fb;
+      --surface-card: #ffffff;
+      --on-surface: #191c1e;
+      --on-surface-variant: #464555;
+      --outline: #e2e8f0;
+      --success: #107c10;
+      --success-bg: #f1f7f1;
+      --warning: #d18b00;
+      --warning-bg: #fffbf0;
+      --error: #ba1a1a;
+      --error-bg: #fef5f3;
+    }
+    body {
+      font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      direction: rtl;
+      background-color: var(--surface);
+      padding: 16px;
+      color: var(--on-surface);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+    #content {
+      max-width: 420px;
+      margin: 0 auto;
+      background: var(--surface-card);
+      padding: 20px;
+      border-radius: 16px;
+      border: 1px solid var(--outline);
+      box-shadow: 0 4px 20px rgba(79, 70, 229, 0.08);
+    }
+    .safe-mode-banner {
+      background: var(--warning-bg);
+      border: 1px solid #f5d28a;
+      color: #7a4a00;
+      padding: 8px 12px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--outline);
+    }
+    .header h2 {
+      color: var(--on-surface);
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      margin: 0;
+      flex: 1;
+      text-align: center;
+    }
+    .logo { font-size: 22px; color: var(--primary); }
+    .refresh-button {
+      background: var(--surface-card);
+      border: 1px solid var(--outline);
+      color: var(--primary);
+      padding: 6px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 500;
+      transition: border-color 0.15s, background-color 0.15s;
+    }
+    .refresh-button:hover {
+      background: var(--primary-soft);
+      border-color: var(--primary);
+    }
+    .status-box {
+      background-color: var(--primary-soft);
+      border-right: 4px solid var(--primary);
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      border-radius: 8px;
+      text-align: center;
+      min-height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .status-box p {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--on-surface);
+    }
+    .check-section {
+      margin: 12px 0;
+      padding: 12px 16px;
+      background-color: var(--surface-card);
+      border: 1px solid var(--outline);
+      border-right: 4px solid var(--outline);
+      border-radius: 8px;
+      transition: border-color 0.2s ease, background-color 0.2s ease;
+    }
+    .check-section h3 {
+      margin: 0 0 4px 0;
+      font-size: 14px;
+      color: var(--on-surface);
+      font-weight: 600;
+      letter-spacing: -0.005em;
+    }
+    .check-section p {
+      margin: 0;
+      font-size: 13px;
+      color: var(--on-surface-variant);
+      line-height: 1.45;
+    }
+    .check-section.success { border-right-color: var(--success); background-color: var(--success-bg); }
+    .check-section.success h3 { color: var(--success); }
+    .check-section.warning { border-right-color: var(--warning); background-color: var(--warning-bg); }
+    .check-section.warning h3 { color: var(--warning); }
+    .check-section.error { border-right-color: var(--error); background-color: var(--error-bg); }
+    .check-section.error h3 { color: var(--error); }
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 24px;
+      justify-content: center;
+    }
+    .btn {
+      padding: 10px 24px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      min-width: 100px;
+      transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .btn-primary {
+      background-color: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
+    }
+    .btn-primary:hover:not(:disabled) {
+      background-color: var(--primary-hover);
+      border-color: var(--primary-hover);
+    }
+    .btn-secondary {
+      background-color: var(--surface-card);
+      color: var(--primary);
+      border-color: var(--primary);
+    }
+    .btn-secondary:hover:not(:disabled) { background-color: var(--primary-soft); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .footer {
+      text-align: center;
+      margin-top: 20px;
+      padding-top: 12px;
+      border-top: 1px solid var(--outline);
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--on-surface-variant);
+      letter-spacing: 0.02em;
+    }
+  </style>
+</head>
+<body>
+  <div id="content">
+    <div id="safe-mode-banner" class="safe-mode-banner">
+      🛡️ <strong>Safe Mode</strong> - אזהרות בלבד, לא חוסם שליחה
+    </div>
+
+    <div class="header">
+      <span class="logo">🔒</span>
+      <h2>בדיקת DLP</h2>
+      <button id="refresh-btn" class="refresh-button" title="רענן בדיקות">🔄</button>
+    </div>
+
+    <div id="status" class="status-box">
+      <p>🔄 מעבדים בדיקות...</p>
+    </div>
+
+    <div id="check1" class="check-section">
+      <h3>בדיקה 1: הצפנה</h3>
+      <p id="check1-result">מחכה...</p>
+    </div>
+
+    <div id="check2" class="check-section">
+      <h3>בדיקה 2: שם קובץ</h3>
+      <p id="check2-result">מחכה...</p>
+    </div>
+
+    <div id="check3" class="check-section">
+      <h3>בדיקה 3: נושא המייל</h3>
+      <p id="check3-result">מחכה...</p>
+    </div>
+
+    <div class="button-group">
+      <button id="send-btn" class="btn btn-primary">שלח</button>
+      <button id="cancel-btn" class="btn btn-secondary">ביטול</button>
+    </div>
+
+    <div class="footer">
+      Nextage DLP Guard v3.0
+    </div>
+  </div>
+</body>
+</html>

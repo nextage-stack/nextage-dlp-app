@@ -1,0 +1,109 @@
+import { runCheck3 } from "../src/validators/check3-subject";
+import { advisor, customer, exemption } from "./fixtures";
+
+describe("runCheck3 (subject + domain validation)", () => {
+  const matchingCustomer = customer({
+    id: "cust-1",
+    customerName: "AcmeCorp",
+    aliases: ["Acme"],
+    primaryDomain: "acme.com",
+  });
+
+  it("BLOCKs on unknown recipient domain", () => {
+    const r = runCheck3({
+      subject: "anything",
+      recipients: ["someone@unknown.example"],
+      userEmail: "sender@nextage.co.il",
+      customers: [matchingCustomer],
+      advisors: [],
+      exemptions: [],
+      exclusions: [],
+    });
+    expect(r.severity).toBe("BLOCK");
+    expect(r.message).toContain("unknown.example");
+  });
+
+  it("BLOCKs when subject is missing the matched customer name", () => {
+    const r = runCheck3({
+      subject: "Q3 figures",
+      recipients: ["finance@acme.com"],
+      userEmail: "sender@nextage.co.il",
+      customers: [matchingCustomer],
+      advisors: [],
+      exemptions: [],
+      exclusions: [],
+    });
+    expect(r.severity).toBe("BLOCK");
+  });
+
+  it("PASSes when subject contains customer name", () => {
+    const r = runCheck3({
+      subject: "AcmeCorp Q3 figures",
+      recipients: ["finance@acme.com"],
+      userEmail: "sender@nextage.co.il",
+      customers: [matchingCustomer],
+      advisors: [],
+      exemptions: [],
+      exclusions: [],
+    });
+    expect(r.isValid).toBe(true);
+  });
+
+  it("PASSes when subject contains alias", () => {
+    const r = runCheck3({
+      subject: "Acme report",
+      recipients: ["finance@acme.com"],
+      userEmail: "sender@nextage.co.il",
+      customers: [matchingCustomer],
+      advisors: [],
+      exemptions: [],
+      exclusions: [],
+    });
+    expect(r.isValid).toBe(true);
+  });
+
+  it("PASSes internal-only recipients (nextage domain is implicit)", () => {
+    const r = runCheck3({
+      subject: "internal note",
+      recipients: ["colleague@nextage.co.il"],
+      userEmail: "sender@nextage.co.il",
+      customers: [],
+      advisors: [],
+      exemptions: [],
+      exclusions: [],
+    });
+    expect(r.isValid).toBe(true);
+  });
+
+  it("WARNs advisor-only when subject lacks linked customer name", () => {
+    const adv = advisor({
+      emailDomain: "advisor.example",
+      linkedCustomers: ["cust-1"],
+    });
+    const r = runCheck3({
+      subject: "general note",
+      recipients: ["adv@advisor.example"],
+      userEmail: "sender@nextage.co.il",
+      customers: [matchingCustomer],
+      advisors: [adv],
+      exemptions: [],
+      exclusions: [],
+    });
+    expect(r.severity).toBe("WARNING");
+  });
+
+  it("PASSes when CHECK_3_BYPASS exemption applies", () => {
+    const r = runCheck3({
+      subject: "anything",
+      recipients: ["someone@unknown.example"],
+      userEmail: "sender@nextage.co.il",
+      customers: [matchingCustomer],
+      advisors: [],
+      exemptions: [
+        exemption({ userEmail: "sender@nextage.co.il", exemptionType: "CHECK_3_BYPASS" }),
+      ],
+      exclusions: [],
+    });
+    expect(r.isValid).toBe(true);
+  });
+});

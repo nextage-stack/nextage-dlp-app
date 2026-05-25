@@ -1,0 +1,70 @@
+// DLPValidator — orchestrates the 3 DLP checks and produces an aggregate result.
+
+import { DLPConfig } from "../models/customer.model";
+import { CheckResult, DLPResult, EmailData } from "../models/dlp-result.model";
+import { SAFE_MODE } from "../shared/constants";
+import { runCheck1 } from "./check1-encryption";
+import { runCheck2 } from "./check2-filename";
+import { runCheck3 } from "./check3-subject";
+
+export class DLPValidator {
+  constructor(private readonly config: DLPConfig) {}
+
+  async runAllChecks(email: EmailData): Promise<DLPResult> {
+    // Empty recipients guard (Outlook returns [] when user hasn't pressed Tab)
+    if (email.recipients.length === 0) {
+      const empty: CheckResult = {
+        check: 1,
+        isValid: false,
+        severity: "WARNING",
+        message: "אין נמענים - הקלד נמען ולחץ Tab או Enter לאישור",
+      };
+      return {
+        results: [empty, { ...empty, check: 2 }, { ...empty, check: 3 }],
+        hasBlock: false,
+        hasWarning: true,
+        shouldBlock: false,
+      };
+    }
+
+    const check1 = runCheck1({
+      attachments: email.attachments,
+      recipients: email.recipients,
+      userEmail: email.userEmail,
+      exclusions: this.config.exclusions,
+      exemptions: this.config.exemptions,
+    });
+
+    const check2 = runCheck2({
+      attachments: email.attachments,
+      recipients: email.recipients,
+      userEmail: email.userEmail,
+      customers: this.config.customers,
+      exemptions: this.config.exemptions,
+    });
+
+    const check3 = runCheck3({
+      subject: email.subject,
+      recipients: email.recipients,
+      userEmail: email.userEmail,
+      customers: this.config.customers,
+      advisors: this.config.advisors,
+      exemptions: this.config.exemptions,
+      exclusions: this.config.exclusions,
+    });
+
+    const results = [check1, check2, check3];
+    const hasBlock = results.some((r) => r.severity === "BLOCK");
+    const hasWarning = results.some((r) => r.severity === "WARNING");
+
+    return {
+      results,
+      hasBlock,
+      hasWarning,
+      // In Safe Mode, BLOCK is shown red but does not actually block send.
+      shouldBlock: hasBlock && !SAFE_MODE,
+    };
+  }
+}
+
+export { SAFE_MODE };
