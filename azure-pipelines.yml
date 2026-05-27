@@ -137,36 +137,11 @@ stages:
               publishLocation: "pipeline"
 
   # ============================================================================
-  # Stage 2: Terraform Plan (PRs and main; apply gated by environment approval)
+  # Stage 2: Deploy (main branch only; environments require approval)
   # ============================================================================
-  - stage: Infra
-    displayName: "Terraform Plan"
-    dependsOn: []
-    condition: always()
-    jobs:
-      - job: TerraformPlan
-        displayName: "terraform plan"
-        pool:
-          vmImage: "ubuntu-latest"
-        steps:
-          - task: TerraformInstaller@1
-            inputs:
-              terraformVersion: "1.7.0"
-
-          - script: |
-              cd terraform
-              terraform init -backend=false
-              terraform validate
-              terraform plan -input=false -no-color
-            displayName: "terraform init / validate / plan"
-            env:
-              ARM_USE_OIDC: "true"
-            # Plan is informational on PRs. terraform apply is intentionally
-            # manual — perform via `make apply` on a workstation with state access.
-
-  # ============================================================================
-  # Stage 3: Deploy (main branch only; environments require approval)
-  # ============================================================================
+  # Note: Terraform/IaC stage removed — Azure resources are managed out-of-band.
+  # If Cosmos DB / Storage Account are added later, reintroduce an IaC stage
+  # (Bicep or Terraform with the marketplace extension installed).
   - stage: Deploy
     displayName: "Deploy to Azure"
     dependsOn:
