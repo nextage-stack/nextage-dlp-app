@@ -20,7 +20,14 @@
     "setup:cosmos": "ts-node scripts/setup-dev-cosmos.ts",
     "seed:cosmos": "ts-node scripts/seed-dev-data.ts"
   },
-  "keywords": ["dlp", "outlook", "office-addin", "nextage", "azure", "cosmos-db"],
+  "keywords": [
+    "dlp",
+    "outlook",
+    "office-addin",
+    "nextage",
+    "azure",
+    "cosmos-db"
+  ],
   "author": "Nextage IT",
   "license": "UNLICENSED",
   "devDependencies": {
@@ -43,5 +50,7 @@
     "webpack-cli": "^7.0.2",
     "webpack-dev-server": "^5.2.3"
   },
-  "dependencies": {}
+  "dependencies": {
+    "express": "^5.2.1"
+  }
 }
