@@ -14,13 +14,22 @@ app.use((req, res, next) => {
   next();
 });
 
-// Config endpoint — returns DLP rules from PostgreSQL (hardcoded for now)
+// Config endpoint — dummy data for testing
 app.get("/api/config", (req, res) => {
   res.json({
-    customers: [],
-    advisors: [],
-    exemptions: [],
-    exclusions: []
+    customers: [
+      { id: "1", name: "לקוח בדיקה", domains: ["test.com", "gmail.com"] },
+      { id: "2", name: "חברת דוגמה", domains: ["example.com"] }
+    ],
+    advisors: [
+      { id: "1", email: "mor.mordechay@nextage.co.il", name: "מור מרדכי" }
+    ],
+    exemptions: [
+      { id: "1", email: "mor.mordechay@nextage.co.il", reason: "מנהל מערכת" }
+    ],
+    exclusions: [
+      { id: "1", extension: "pdf", reason: "PDF לא דורש הצפנה" }
+    ]
   });
 });
 
