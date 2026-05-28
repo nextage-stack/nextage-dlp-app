@@ -22,13 +22,7 @@ jobs:
         run: npm ci
 
       - name: Build
-        run: npm run build
-        env:
-          SWA_HOSTNAME: ${{ secrets.SWA_HOSTNAME }}
-          FUNCTIONS_HOSTNAME: ${{ secrets.FUNCTIONS_HOSTNAME }}
-          ENTRA_APP_CLIENT_ID: ${{ secrets.ENTRA_APP_CLIENT_ID }}
-          MANIFEST_GUID: ${{ secrets.MANIFEST_GUID }}
-          AZURE_FUNCTIONS_URL: ${{ secrets.AZURE_FUNCTIONS_URL }}
+        run: npx webpack --mode production
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
