@@ -30,8 +30,10 @@ async function initDB() {
       CREATE TABLE IF NOT EXISTS advisors (
         id SERIAL PRIMARY KEY,
         email TEXT NOT NULL,
-        name TEXT NOT NULL
+        name TEXT NOT NULL,
+        linked_customers TEXT[] NOT NULL DEFAULT '{}'
       );
+      ALTER TABLE advisors ADD COLUMN IF NOT EXISTS linked_customers TEXT[] NOT NULL DEFAULT '{}';
       CREATE TABLE IF NOT EXISTS exemptions (
         id SERIAL PRIMARY KEY,
         email TEXT NOT NULL,
@@ -110,18 +112,18 @@ app.get("/api/admin/advisors", adminAuth, async (req, res) => {
   res.json(r.rows);
 });
 app.post("/api/admin/advisors", adminAuth, async (req, res) => {
-  const { email, name } = req.body;
+  const { email, name, linked_customers } = req.body;
   const r = await pool.query(
-    "INSERT INTO advisors (email, name) VALUES ($1, $2) RETURNING *",
-    [email, name]
+    "INSERT INTO advisors (email, name, linked_customers) VALUES ($1, $2, $3) RETURNING *",
+    [email, name, linked_customers || []]
   );
   res.json(r.rows[0]);
 });
 app.put("/api/admin/advisors/:id", adminAuth, async (req, res) => {
-  const { email, name } = req.body;
+  const { email, name, linked_customers } = req.body;
   const r = await pool.query(
-    "UPDATE advisors SET email=$1, name=$2 WHERE id=$3 RETURNING *",
-    [email, name, req.params.id]
+    "UPDATE advisors SET email=$1, name=$2, linked_customers=$3 WHERE id=$4 RETURNING *",
+    [email, name, linked_customers || [], req.params.id]
   );
   res.json(r.rows[0]);
 });
@@ -300,7 +302,7 @@ app.get("/admin", (req, res) => {
           <h2>יועצים</h2>
           <button class="btn btn-success btn-sm" onclick="openModal('advisors')">+ הוסף יועץ</button>
         </div>
-        <table><thead><tr><th>שם</th><th>אימייל</th><th>פעולות</th></tr></thead>
+        <table><thead><tr><th>שם</th><th>אימייל</th><th>לקוחות מקושרים</th><th>פעולות</th></tr></thead>
         <tbody id="table-advisors"></tbody></table>
       </div>
     </div>
@@ -406,6 +408,7 @@ async function loadTable(name) {
     tbody.innerHTML = data.map(r => \`<tr>
       <td><strong>\${r.name}</strong></td>
       <td>\${r.email}</td>
+      <td>\${(r.linked_customers||[]).map(c=>\`<span class="tag tag-green">\${c}</span>\`).join("") || '<span style="color:#aaa">—</span>'}</td>
       <td class="actions">
         <button class="btn btn-primary btn-sm" onclick='editRow("advisors",\${JSON.stringify(r)})'>✏️ ערוך</button>
         <button class="btn btn-danger btn-sm" onclick='deleteRow("advisors",\${r.id})'>🗑️</button>
@@ -467,7 +470,10 @@ function buildForm(table, row) {
     <div class="form-group"><label>שם</label>
       <input id="f-name" value="\${row?.name||""}" placeholder="ישראל ישראלי"/></div>
     <div class="form-group"><label>אימייל</label>
-      <input id="f-email" value="\${row?.email||""}" placeholder="name@nextage.co.il"/></div>\`;
+      <input id="f-email" value="\${row?.email||""}" placeholder="name@nextage.co.il"/></div>
+    <div class="form-group"><label>לקוחות מקושרים</label>
+      <input id="f-linked" value="\${(row?.linked_customers||[]).join(", ")}" placeholder="בנק לאומי, מגדל ביטוח"/>
+      <small>שמות לקוחות מדויקים כפי שמופיעים בטבלת לקוחות — הפרד בפסיק</small></div>\`;
   if (table === "exemptions") return \`
     <div class="form-group"><label>אימייל</label>
       <input id="f-email" value="\${row?.email||""}" placeholder="name@nextage.co.il"/></div>
@@ -490,7 +496,8 @@ function getFormData(table) {
   };
   if (table === "advisors") return {
     name: document.getElementById("f-name").value.trim(),
-    email: document.getElementById("f-email").value.trim()
+    email: document.getElementById("f-email").value.trim(),
+    linked_customers: document.getElementById("f-linked").value.split(",").map(d=>d.trim()).filter(Boolean)
   };
   if (table === "exemptions") return {
     email: document.getElementById("f-email").value.trim(),

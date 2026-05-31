@@ -17,6 +17,7 @@ import {
 } from "../models/dlp-result.model";
 import { Exclusion, Exemption } from "../models/customer.model";
 import {
+  ARCHIVE_EXTENSIONS_REGEX,
   IMAGE_EXTENSIONS_REGEX,
   INTERNAL_DOMAIN,
   MAGIC_BYTES,
@@ -64,19 +65,24 @@ export function runCheck1(input: Check1Input): CheckResult {
   const unencrypted: string[] = [];
   const unverifiable: string[] = [];
   for (const att of attachments) {
+    // Images are always skipped
     if (IMAGE_EXTENSIONS_REGEX.test(att.name)) continue;
+    // ZIP/RAR/7Z are always considered encrypted (spec appendix)
+    if (ARCHIVE_EXTENSIONS_REGEX.test(att.name)) continue;
     const status = classify(att);
     if (status === "UNENCRYPTED") unencrypted.push(att.name);
     else if (status === "UNVERIFIABLE") unverifiable.push(att.name);
   }
 
-  const note = SAFE_MODE ? " (Safe Mode - חסימה לצורכי הדגמה)" : "";
+  // In Safe Mode: severity = WARNING. In Production: severity = BLOCK.
+  const severity = SAFE_MODE ? "WARNING" : "BLOCK";
+  const note = SAFE_MODE ? " (Safe Mode)" : "";
 
   if (unverifiable.length > 0) {
     return {
       check: 1,
       isValid: false,
-      severity: "BLOCK",
+      severity,
       message:
         `לא ניתן לאמת הצפנה עבור: ${unverifiable.join(", ")}. ` +
         `נסה לשלוח ממחשב שולחני או צור קשר עם IT.${note}`,
@@ -88,7 +94,7 @@ export function runCheck1(input: Check1Input): CheckResult {
     return {
       check: 1,
       isValid: false,
-      severity: "BLOCK",
+      severity,
       message: `קבצים לא מוצפנים: ${unencrypted.join(", ")}${note}`,
       details: { unencryptedFiles: unencrypted },
     };

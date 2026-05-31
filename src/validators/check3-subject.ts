@@ -25,14 +25,15 @@ export function runCheck3(input: Check3Input): CheckResult {
     return pass("המשתמש פטור מבדיקת נושא");
   }
 
-  // 1. Unknown domain check (BLOCK in production)
+  // 1. Unknown domain check (BLOCK in Production, WARNING in Safe Mode)
   const unknownDomains = findUnknownDomains(recipients, customers, advisors, exclusions);
   if (unknownDomains.length > 0) {
-    const note = SAFE_MODE ? " (Safe Mode - חסימה לצורכי הדגמה)" : "";
+    const severity = SAFE_MODE ? "WARNING" : "BLOCK";
+    const note = SAFE_MODE ? " (Safe Mode)" : "";
     return {
       check: 3,
       isValid: false,
-      severity: "BLOCK",
+      severity,
       message: `דומיינים לא מוכרים: ${unknownDomains.join(", ")}. אנא פנה ל-IT.${note}`,
       details: { unknownDomains },
     };
@@ -57,11 +58,12 @@ export function runCheck3(input: Check3Input): CheckResult {
     }
 
     if (missing.length > 0) {
-      const note = SAFE_MODE ? " (Safe Mode - חסימה לצורכי הדגמה)" : "";
+      const severity = SAFE_MODE ? "WARNING" : "BLOCK";
+      const note = SAFE_MODE ? " (Safe Mode)" : "";
       return {
         check: 3,
         isValid: false,
-        severity: "BLOCK",
+        severity,
         message: `ה-Subject חייב להכיל את שם הלקוח: ${missing.join(", ")}${note}`,
         details: { missingCustomers: missing },
       };
@@ -76,12 +78,19 @@ export function runCheck3(input: Check3Input): CheckResult {
     const linkedDisplayNames = new Set<string>();
 
     matchedAdvisors.forEach((a) => {
-      a.linkedCustomers.forEach((custId) => {
-        const customer = customers.find((c) => c.id === custId.trim());
+      a.linkedCustomers.forEach((custRef) => {
+        // Match by id OR by customerName (our DB stores names, not IDs)
+        const customer = customers.find(
+          (c) => c.id === custRef.trim() || c.customerName.toLowerCase() === custRef.trim().toLowerCase()
+        );
         if (customer) {
           linkedDisplayNames.add(customer.customerName);
           linkedSearchTokens.add(customer.customerName.toLowerCase());
           customer.aliases.forEach((alias) => linkedSearchTokens.add(alias.toLowerCase()));
+        } else {
+          // Fallback: use the raw value as a search token
+          linkedDisplayNames.add(custRef.trim());
+          linkedSearchTokens.add(custRef.trim().toLowerCase());
         }
       });
     });

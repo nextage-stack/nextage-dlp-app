@@ -2,13 +2,9 @@
 
 // ⚠️ SAFE_MODE — when true, BLOCK severities still allow send (warnings-only mode).
 //
-// CURRENT VALUE: false — Active blocking enabled.
-// Target environment: TEST TENANT only. This is not the live Nextage production tenant.
-// Behavior: BLOCK severities call event.completed({ allowEvent: false }) and cancel the send.
-//
-// Set back to true if you need warnings-only behavior for any specific testing window.
-// Change requires redeploy.
-export const SAFE_MODE = false;
+// CURRENT VALUE: true — Safe Mode ON (אזהרות בלבד, אין חסימה).
+// Per spec: מצב נוכחי = Safe Mode ON. Change to false for Production.
+export const SAFE_MODE = true;
 
 // Internal organization domain — emails to this domain skip encryption checks
 export const INTERNAL_DOMAIN = "nextage.co.il";

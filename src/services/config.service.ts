@@ -74,7 +74,7 @@ export class ConfigService {
             partitionKey: "advisors" as const,
             advisorName: a.name,
             emailDomain: a.email?.split("@")[1] || "",
-            linkedCustomers: [],
+            linkedCustomers: Array.isArray(a.linked_customers) ? a.linked_customers : [],
             status: "ACTIVE" as const,
             updatedAt: new Date().toISOString(),
           }))
