@@ -51,6 +51,7 @@
     "webpack-dev-server": "^5.2.3"
   },
   "dependencies": {
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "pg": "^8.21.0"
   }
 }
