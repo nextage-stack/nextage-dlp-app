@@ -414,7 +414,7 @@ async function loadTable(name) {
       </td></tr>\`).join("");
   } else if (name === "exclusions") {
     tbody.innerHTML = data.map(r => \`<tr>
-      <td><span class="tag tag-gray">.${r.extension}</span></td>
+      <td><span class="tag tag-gray">.\${r.extension}</span></td>
       <td>\${r.reason||""}</td>
       <td class="actions">
         <button class="btn btn-primary btn-sm" onclick='editRow("exclusions",\${JSON.stringify(r)})'>✏️ ערוך</button>
