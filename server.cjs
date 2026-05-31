@@ -101,6 +101,45 @@ app.post("/api/audit", async (req, res) => {
   }
 });
 
+// Temporary seed endpoint — remove after first use
+app.post("/api/seed", async (req, res) => {
+  try {
+    await pool.query(`
+      -- Clear existing data
+      TRUNCATE customers, advisors, exemptions, exclusions RESTART IDENTITY CASCADE;
+
+      -- 3 Pseudo Customers
+      INSERT INTO customers (name, domains) VALUES
+        ('בנק לאומי', ARRAY['leumi.co.il', 'bankleumi.co.il', 'leumi.com']),
+        ('מגדל ביטוח', ARRAY['migdal.co.il', 'migdal.com']),
+        ('שירביט ביטוח', ARRAY['shirbit.co.il', 'shirbit.com']);
+
+      -- Advisors (Nextage employees managing these customers)
+      INSERT INTO advisors (email, name) VALUES
+        ('mor.mordechay@nextage.co.il', 'מור מרדכי'),
+        ('david.cohen@nextage.co.il', 'דוד כהן'),
+        ('noa.levi@nextage.co.il', 'נועה לוי');
+
+      -- Exemptions (emails that bypass DLP checks entirely)
+      INSERT INTO exemptions (email, reason) VALUES
+        ('mor.mordechay@nextage.co.il', 'מנהל מערכת'),
+        ('ceo@nextage.co.il', 'מנכל חברה'),
+        ('it@nextage.co.il', 'צוות IT פנימי');
+
+      -- Exclusions (file extensions that don't require encryption)
+      INSERT INTO exclusions (extension, reason) VALUES
+        ('pdf', 'PDF מוגן בנפרד'),
+        ('txt', 'קובץ טקסט לא רגיש'),
+        ('png', 'תמונה לא רגישה'),
+        ('jpg', 'תמונה לא רגישה');
+    `);
+    res.json({ ok: true, message: "Database seeded with 3 pseudo-customers!" });
+  } catch (err) {
+    console.error("[Seed] error:", err.message);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // Serve taskpane for all other routes
 app.use((req, res) => {
   res.sendFile(path.join(__dirname, "dist", "taskpane.html"));
