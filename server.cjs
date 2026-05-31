@@ -601,11 +601,10 @@ app.post("/api/seed", async (req, res) => {
         ('consultant@advisor3.com', 'Advisor Test 3', ARRAY['Global Finance']);
     `);
 
-    // Exemptions — scenario 18: test@randomdomain.com has ALL_CHECKS bypass
+    // Exemptions — only scenario 18 user has ALL_CHECKS bypass
     await pool.query(`
       INSERT INTO exemptions (email, reason) VALUES
-        ('test@randomdomain.com', 'ALL_CHECKS - בדיקת תרחיש 18'),
-        ('mor.mordechay@nextage.co.il', 'מנהל מערכת');
+        ('test@randomdomain.com', 'ALL_CHECKS - בדיקת תרחיש 18');
     `);
 
     // Exclusions — file extensions that skip Check 1
