@@ -59,11 +59,14 @@ export function runCheck2(input: Check2Input): CheckResult {
 
 function nameMatchesAnyToken(name: string, tokens: string[]): boolean {
   const lower = name.toLowerCase();
+  // QA fix: prefer substring match. For long tokens (>3 chars) any
+  // occurrence counts — "ClientCorpData.xlsx" matches "clientcorp".
+  // Short aliases (≤3 chars like "CC", "TS") still require word boundaries
+  // to avoid false matches like "CC" inside "account".
   return tokens.some((token) => {
-    // Word-boundary check that also treats common filename separators as boundaries.
-    // \b alone misses Hebrew tokens, so we explicitly check the surrounding chars.
     const idx = lower.indexOf(token);
     if (idx < 0) return false;
+    if (token.length > 3) return true;
     const before = idx === 0 ? null : lower.charAt(idx - 1);
     const afterIdx = idx + token.length;
     const after = afterIdx >= lower.length ? null : lower.charAt(afterIdx);
