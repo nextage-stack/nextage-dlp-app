@@ -5,7 +5,7 @@
            xsi:type="MailApp">
 
   <Id>12d3d757-ea94-4b16-be30-fd87c3677d9b</Id>
-  <Version>1.2.0.0</Version>
+  <Version>1.6.0.0</Version>
   <ProviderName>Nextage</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="Nextage DLP Guard"/>
@@ -101,19 +101,17 @@
       </bt:LongStrings>
     </Resources>
 
-    <!-- V1_1: Smart Alerts — OnMessageSend blocks Outlook Send button -->
+    <!-- V1_1: Lowered MinVersion to 1.5 for compatibility with Outlook 2016/2019 classic.
+         OnMessageSend disabled (was causing add-in to hang on classic Outlook). -->
     <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides/1.1" xsi:type="VersionOverridesV1_1">
       <Requirements>
-        <bt:Sets DefaultMinVersion="1.12">
+        <bt:Sets DefaultMinVersion="1.5">
           <bt:Set Name="Mailbox"/>
         </bt:Sets>
       </Requirements>
 
       <Hosts>
         <Host xsi:type="MailHost">
-          <Runtimes>
-            <Runtime resid="Commands.Url" lifetime="short"/>
-          </Runtimes>
           <DesktopFormFactor>
             <FunctionFile resid="Commands.Url"/>
             <ExtensionPoint xsi:type="MessageComposeCommandSurface">
@@ -138,12 +136,18 @@
                 </Group>
               </OfficeTab>
             </ExtensionPoint>
+            <!-- OnMessageSend disabled — incompatible with Outlook 2016/2019 classic.
+                 Users with classic Outlook were unable to send emails (add-in hanging).
+                 DLP checks still run manually via the taskpane button. -->
+            <!--
             <ExtensionPoint xsi:type="LaunchEvent">
               <LaunchEvents>
                 <LaunchEvent Type="OnMessageSend" FunctionName="onMessageSend" SendMode="Block"/>
               </LaunchEvents>
               <SourceLocation resid="Commands.Url"/>
             </ExtensionPoint>
+            -->
+
           </DesktopFormFactor>
         </Host>
       </Hosts>
