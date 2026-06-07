@@ -4,7 +4,7 @@ import { CheckResult, DLPResult, EmailData, RecipientInfo } from "../models/dlp-
 import { AuditService } from "../services/audit.service";
 import { authService } from "../services/auth.service";
 import { ConfigService } from "../services/config.service";
-import { APP_VERSION, SAFE_MODE } from "../shared/constants";
+import { SAFE_MODE } from "../shared/constants";
 import { DLPValidator } from "../validators/validators";
 import { readAttachmentsWithHeaders } from "../commands/attachment-reader";
 
@@ -21,10 +21,6 @@ Office.onReady((info) => {
 });
 
 function init(): void {
-  // Show version number in footer
-  const versionEl = document.getElementById("app-version");
-  if (versionEl) versionEl.textContent = APP_VERSION;
-
   // Update Safe Mode banner from constant
   const banner = document.getElementById("safe-mode-banner");
   if (banner && !SAFE_MODE) banner.style.display = "none";
@@ -190,10 +186,7 @@ function displayResult(elementId: string, result: CheckResult): void {
 
 function updateOverallStatus(result: DLPResult): void {
   if (result.shouldBlock) {
-    showStatus(
-      "⛔ שליחה אסורה — אל תשלח עד שתתקן את הבעיות שצוינו למעלה. שליחה תוך הפרת DLP מתועדת ומדווחת.",
-      "error",
-    );
+    showStatus("שליחה חסומה - תקן את הבעיות לפני המשך", "error");
     setSendEnabled(false);
   } else if (result.hasBlock && SAFE_MODE) {
     showStatus("🛡️ Safe Mode: היו חסימות ב-Production - השליחה מאופשרת לצורכי בדיקה", "error");
@@ -211,18 +204,8 @@ function setSendEnabled(enabled: boolean): void {
   const btn = document.getElementById("send-btn") as HTMLButtonElement | null;
   if (!btn) return;
   btn.disabled = !enabled;
-  btn.style.opacity = enabled ? "1" : "0.4";
+  btn.style.opacity = enabled ? "1" : "0.5";
   btn.style.cursor = enabled ? "pointer" : "not-allowed";
-  // When blocked, change the button text and color to be unmissable
-  if (!enabled) {
-    btn.textContent = "⛔ שליחה אסורה";
-    btn.style.background = "#ba1a1a";
-    btn.style.borderColor = "#ba1a1a";
-  } else {
-    btn.textContent = "שלח";
-    btn.style.background = "";
-    btn.style.borderColor = "";
-  }
 }
 
 function closeTaskpane(): void {

@@ -9,16 +9,13 @@ export const SAFE_MODE = false;
 // Internal organization domain — emails to this domain skip encryption checks
 export const INTERNAL_DOMAIN = "nextage.co.il";
 
-// App version — displayed in taskpane footer. Bump on every release.
-export const APP_VERSION = "2.0.0";
-
 // API base — Azure Functions proxy URL. In dev, falls back to localhost:7071.
 export const API_BASE_URL =
   (typeof process !== "undefined" && process.env?.AZURE_FUNCTIONS_URL) ||
   "https://nextage-dlp-app-gchqasbzeqgkccf7.westeurope-01.azurewebsites.net/api";
 
-// Session cache TTL for config (1 minute — near real-time updates from admin UI)
-export const CONFIG_CACHE_TTL_MS = 60 * 1000;
+// Session cache TTL for config (60 minutes)
+export const CONFIG_CACHE_TTL_MS = 60 * 60 * 1000;
 
 // Network timeouts
 export const API_TIMEOUT_MS = 5000;
