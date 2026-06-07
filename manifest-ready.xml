@@ -4,8 +4,8 @@
            xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
            xsi:type="MailApp">
 
-  <Id>12d3d757-ea94-4b16-be30-fd87c3677d9b</Id>
-  <Version>1.9.0.0</Version>
+  <Id>e25b384f-6418-44f4-aa44-285b3b89af6b</Id>
+  <Version>2.0.0.0</Version>
   <ProviderName>Nextage</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="Nextage DLP Guard"/>
@@ -112,29 +112,6 @@
         <Host xsi:type="MailHost">
           <DesktopFormFactor>
             <FunctionFile resid="Commands.Url"/>
-
-            <ExtensionPoint xsi:type="MessageComposeCommandSurface">
-              <OfficeTab id="TabDefault">
-                <Group id="msgComposeDLPGroupV2">
-                  <Label resid="GroupLabel"/>
-                  <Control xsi:type="Button" id="msgComposeDLPButtonV2">
-                    <Label resid="TaskpaneButton.Label"/>
-                    <Supertip>
-                      <Title resid="TaskpaneButton.Label"/>
-                      <Description resid="TaskpaneButton.Tooltip"/>
-                    </Supertip>
-                    <Icon>
-                      <bt:Image size="16" resid="Icon.16x16"/>
-                      <bt:Image size="32" resid="Icon.32x32"/>
-                      <bt:Image size="80" resid="Icon.80x80"/>
-                    </Icon>
-                    <Action xsi:type="ShowTaskpane">
-                      <SourceLocation resid="Taskpane.Url"/>
-                    </Action>
-                  </Control>
-                </Group>
-              </OfficeTab>
-            </ExtensionPoint>
 
             <ExtensionPoint xsi:type="LaunchEvent">
               <LaunchEvents>
