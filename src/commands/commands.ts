@@ -11,9 +11,15 @@ import { DLPValidator } from "../validators/validators";
 import { readAttachmentsWithHeaders } from "./attachment-reader";
 
 Office.onReady(() => {
-  Office.actions.associate("onMessageSend", onMessageSendHandler);
-  console.log("[Commands] onMessageSend handler registered");
+  // Register for V1_1 LaunchEvent (modern Outlook)
+  Office.actions.associate("onMessageSendHandler", onMessageSendHandler);
+  console.log("[Commands] onMessageSendHandler registered for OnMessageSend");
 });
+
+// Expose handler globally so V1_0 ItemSend event (Outlook Classic) can find it.
+// The legacy <Event Type="ItemSend" FunctionName="onMessageSendHandler"/> looks
+// for a global function with this exact name.
+(globalThis as any).onMessageSendHandler = onMessageSendHandler;
 
 async function onMessageSendHandler(event: Office.AddinCommands.Event): Promise<void> {
   console.log("[OnSend] === Invoked ===");
