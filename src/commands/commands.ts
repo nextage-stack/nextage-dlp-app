@@ -20,6 +20,9 @@ Office.onReady(() => {
 // The legacy <Event Type="ItemSend" FunctionName="onMessageSendHandler"/> looks
 // for a global function with this exact name.
 (globalThis as any).onMessageSendHandler = onMessageSendHandler;
+if (typeof window !== "undefined") {
+  (window as any).onMessageSendHandler = onMessageSendHandler;
+}
 
 async function onMessageSendHandler(event: Office.AddinCommands.Event): Promise<void> {
   console.log("[OnSend] === Invoked ===");
@@ -60,14 +63,34 @@ async function onMessageSendHandler(event: Office.AddinCommands.Event): Promise<
         .map((r) => r.message)
         .join("\n");
 
-      // SmartAlerts options (errorMessage / cancelLabel / sendModeOverride) are
-      // accepted by the OnMessageSend event but missing from the basic
-      // EventCompletedOptions typing — cast to keep strict TS happy.
+      const fullMessage = `DLP חוסם את השליחה:\n${issueMessages}`;
+
+      // For Outlook Classic (ItemSend event), add a notification message to the
+      // mail item's InfoBar BEFORE calling event.completed. This is what
+      // shows up in the popup dialog and InfoBar that blocks the send.
+      try {
+        const item = Office.context.mailbox.item as Office.MessageCompose;
+        await new Promise<void>((resolve) => {
+          item.notificationMessages.replaceAsync(
+            "dlpBlock",
+            {
+              type: Office.MailboxEnums.ItemNotificationMessageType.ErrorMessage,
+              message: fullMessage.substring(0, 150), // Classic InfoBar limit
+            },
+            () => resolve(),
+          );
+        });
+      } catch (notifyErr) {
+        console.warn("[OnSend] Could not set notification message:", notifyErr);
+      }
+
+      // event.completed options below are honored by modern Outlook (Smart Alerts).
+      // Outlook Classic ignores the extra fields but still blocks via allowEvent:false
+      // and shows the InfoBar notification message we just set above.
       event.completed({
         allowEvent: false,
-        errorMessage: `DLP חוסם את השליחה:\n${issueMessages}`,
+        errorMessage: fullMessage,
         cancelLabel: "תקן את הבעיות",
-        sendModeOverride: Office.MailboxEnums.SendModeOverride.PromptUser,
       } as Office.SmartAlertsEventCompletedOptions);
       return;
     }
