@@ -32,7 +32,29 @@ function init(): void {
   });
   document.getElementById("cancel-btn")?.addEventListener("click", closeTaskpane);
 
+  // Re-run checks automatically when user changes recipients, subject, or attachments.
+  // This keeps the InfoBar warnings up-to-date as the user edits the email.
+  try {
+    const item = Office.context.mailbox.item as Office.MessageCompose;
+    const debouncedRecheck = debounce(runChecks, 600);
+    item.to?.addHandlerAsync?.(Office.EventType.RecipientsChanged, debouncedRecheck);
+    item.cc?.addHandlerAsync?.(Office.EventType.RecipientsChanged, debouncedRecheck);
+    item.bcc?.addHandlerAsync?.(Office.EventType.RecipientsChanged, debouncedRecheck);
+    item.subject?.addHandlerAsync?.(Office.EventType.InfobarClicked, debouncedRecheck);
+    (item as any).addHandlerAsync?.(Office.EventType.AttachmentsChanged, debouncedRecheck);
+  } catch (err) {
+    console.warn("[Taskpane] Could not register change handlers:", err);
+  }
+
   runChecks();
+}
+
+function debounce<T extends (...args: any[]) => any>(fn: T, ms: number): T {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+  return ((...args: any[]) => {
+    if (timeout) clearTimeout(timeout);
+    timeout = setTimeout(() => fn(...args), ms);
+  }) as T;
 }
 
 async function runChecks(): Promise<void> {
@@ -77,10 +99,65 @@ async function runChecks(): Promise<void> {
     displayResult("check3", result.results[2]);
 
     updateOverallStatus(result);
+
+    // Add persistent banner notifications on the email itself.
+    // These show at the top of the email (InfoBar) and stay visible even when
+    // the taskpane is closed. This is how we warn users in Outlook Classic
+    // without requiring OnMessageSend (Smart Alerts) support.
+    await updateEmailNotifications(result);
   } catch (error: unknown) {
     console.error("[Taskpane] error:", error);
     showStatus(`שגיאה: ${error instanceof Error ? error.message : String(error)}`, "error");
   }
+}
+
+/**
+ * Adds warning/error banners to the top of the email (InfoBar). Visible to
+ * the user without needing the taskpane open. Works in Outlook Classic.
+ *
+ * Notification keys (max ~5 active per item):
+ *   - dlp_check1 → Encryption result
+ *   - dlp_check2 → Filename match result
+ *   - dlp_check3 → Subject + domain result
+ */
+async function updateEmailNotifications(result: DLPResult): Promise<void> {
+  const item = Office.context.mailbox.item as Office.MessageCompose;
+  if (!item?.notificationMessages) return;
+
+  const keys = ["dlp_check1", "dlp_check2", "dlp_check3"];
+  await Promise.all(
+    result.results.map((r, idx) => {
+      const key = keys[idx]!;
+      // Clear pass results — no need to show green banners on every email
+      if (r.severity === "INFO" || r.isValid) {
+        return new Promise<void>((resolve) =>
+          item.notificationMessages.removeAsync(key, () => resolve()),
+        );
+      }
+
+      const type =
+        r.severity === "BLOCK"
+          ? Office.MailboxEnums.ItemNotificationMessageType.ErrorMessage
+          : Office.MailboxEnums.ItemNotificationMessageType.InformationalMessage;
+
+      // Notification messages have a 150-char limit on Outlook desktop
+      const prefix = r.severity === "BLOCK" ? "❌ חסום DLP: " : "⚠️ DLP: ";
+      const message = (prefix + r.message).substring(0, 150);
+
+      return new Promise<void>((resolve) =>
+        item.notificationMessages.replaceAsync(
+          key,
+          {
+            type,
+            message,
+            icon: "Icon.16x16",
+            persistent: r.severity === "BLOCK",
+          },
+          () => resolve(),
+        ),
+      );
+    }),
+  );
 }
 
 async function getEmailData(): Promise<EmailData> {
