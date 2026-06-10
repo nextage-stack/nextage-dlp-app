@@ -20,15 +20,18 @@ Office.onReady((info) => {
   }
 });
 
+// Track which violations the user has already been warned about — so the
+// popup doesn't reappear every time they type a character.
+const dismissedViolations = new Set<string>();
+
 function init(): void {
   // Update Safe Mode banner from constant
   const banner = document.getElementById("safe-mode-banner");
   if (banner && !SAFE_MODE) banner.style.display = "none";
 
-  document.getElementById("refresh-btn")?.addEventListener("click", runChecks);
-  document.getElementById("send-btn")?.addEventListener("click", () => {
-    // Send button in the task pane is informational only — real send is via Outlook
-    showStatus("יש ללחוץ Send בחלון Outlook עצמו", "info");
+  document.getElementById("refresh-btn")?.addEventListener("click", () => {
+    dismissedViolations.clear();
+    runChecks();
   });
   document.getElementById("cancel-btn")?.addEventListener("click", closeTaskpane);
 
@@ -105,6 +108,11 @@ async function runChecks(): Promise<void> {
     // the taskpane is closed. This is how we warn users in Outlook Classic
     // without requiring OnMessageSend (Smart Alerts) support.
     await updateEmailNotifications(result);
+
+    // Show a popup with violations the user hasn't seen yet.
+    // Each unique violation message only triggers the popup once per session;
+    // resetting via the refresh button clears the dismissed set.
+    showViolationsPopup(result);
   } catch (error: unknown) {
     console.error("[Taskpane] error:", error);
     showStatus(`שגיאה: ${error instanceof Error ? error.message : String(error)}`, "error");
@@ -275,12 +283,46 @@ function updateOverallStatus(result: DLPResult): void {
   }
 }
 
-function setSendEnabled(enabled: boolean): void {
-  const btn = document.getElementById("send-btn") as HTMLButtonElement | null;
-  if (!btn) return;
-  btn.disabled = !enabled;
-  btn.style.opacity = enabled ? "1" : "0.5";
-  btn.style.cursor = enabled ? "pointer" : "not-allowed";
+function setSendEnabled(_enabled: boolean): void {
+  // The taskpane Send button was removed — kept as a no-op so callers don't break.
+}
+
+/**
+ * Shows a popup with all current violations. Each violation only triggers
+ * the popup once — once the user dismisses, we won't bother them again
+ * for the same violation until they click refresh or fix the email.
+ */
+function showViolationsPopup(result: DLPResult): void {
+  const violations = result.results.filter(
+    (r) => r.severity === "BLOCK" || r.severity === "WARNING",
+  );
+  if (violations.length === 0) {
+    // All clear — reset so future violations re-trigger the popup
+    dismissedViolations.clear();
+    return;
+  }
+
+  // Build a signature from the violations to detect "new" ones
+  const signature = violations.map((v) => `${v.check}:${v.severity}:${v.message}`).join("|");
+  if (dismissedViolations.has(signature)) return;
+  dismissedViolations.add(signature);
+
+  const lines = violations.map((v) => {
+    const icon = v.severity === "BLOCK" ? "🚫" : "⚠️";
+    return `${icon} ${v.message}`;
+  });
+  const header = result.shouldBlock
+    ? "⛔ DLP חוסם את השליחה"
+    : "⚠️ אזהרת DLP — שים לב לפני שליחה";
+
+  // setTimeout lets the UI render the check results first, then popup.
+  setTimeout(() => {
+    alert(`${header}\n\n${lines.join("\n\n")}\n\n${
+      result.shouldBlock
+        ? "אנא תקן את הבעיות לפני שליחת המייל."
+        : "המייל יישלח אבל יש לבדוק את הסימונים."
+    }`);
+  }, 100);
 }
 
 function closeTaskpane(): void {
