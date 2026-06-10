@@ -144,17 +144,15 @@ async function updateEmailNotifications(result: DLPResult): Promise<void> {
       const prefix = r.severity === "BLOCK" ? "❌ חסום DLP: " : "⚠️ DLP: ";
       const message = (prefix + r.message).substring(0, 150);
 
+      // ErrorMessage doesn't support icon/persistent. Informational uses
+      // a different shape; keep it minimal to stay cross-platform.
+      const payload: Office.NotificationMessageDetails =
+        r.severity === "BLOCK"
+          ? { type, message }
+          : { type, message };
+
       return new Promise<void>((resolve) =>
-        item.notificationMessages.replaceAsync(
-          key,
-          {
-            type,
-            message,
-            icon: "Icon.16x16",
-            persistent: r.severity === "BLOCK",
-          },
-          () => resolve(),
-        ),
+        item.notificationMessages.replaceAsync(key, payload, () => resolve()),
       );
     }),
   );
