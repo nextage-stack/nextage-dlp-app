@@ -1,0 +1,54 @@
+name: Build, Test, and Deploy to Azure Web App
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '22'
+  AZURE_WEBAPP_NAME: Nextage-dlp-app
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test -- --ci
+
+      - name: Build (webpack production + manifests)
+        run: npm run build
+
+      - name: Ensure assets are in dist/
+        run: |
+          mkdir -p dist/assets
+          cp -r src/assets/* dist/assets/ 2>/dev/null || true
+          ls -la dist/
+
+      - name: Validate Outlook manifest
+        run: npm run validate-manifest-xml
+        continue-on-error: true
+
+      - name: Prune to production dependencies
+        run: npm prune --omit=dev
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: '.'
