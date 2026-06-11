@@ -10,15 +10,28 @@ import { SAFE_MODE } from "../shared/constants";
 import { DLPValidator } from "../validators/validators";
 import { readAttachmentsWithHeaders } from "./attachment-reader";
 
-Office.onReady(() => {
-  // Register handlers under BOTH names — older manifests reference
-  // `onMessageSend`, newer ones use `onMessageSendHandler`. Registering
-  // both keeps us compatible with any manifest version still floating around.
+// Register handlers under BOTH names — older manifests reference `onMessageSend`,
+// newer ones use `onMessageSendHandler`. Registering both keeps us compatible.
+function registerCommands(): void {
   Office.actions.associate("onMessageSendHandler", onMessageSendHandler);
   Office.actions.associate("onMessageSend", onMessageSendHandler);
   Office.actions.associate("onNewComposeHandler", onNewComposeHandler);
   console.log("[Commands] LaunchEvent handlers registered");
-});
+}
+
+// CLASSIC Outlook on Windows runs the send event in a JavaScript-only runtime where
+// Office.onReady's callback may NOT fire before the event arrives. If we only
+// registered inside Office.onReady, the handler would be missing and Outlook would
+// report the add-in as "unavailable". So we register at the TOP LEVEL immediately —
+// in the JS-only runtime, Office is already injected when this file executes.
+if (typeof Office !== "undefined" && typeof Office.actions !== "undefined") {
+  registerCommands();
+}
+
+// HTML runtimes (web, new Outlook, Mac): also register once Office.js is initialized.
+if (typeof Office !== "undefined" && typeof Office.onReady === "function") {
+  Office.onReady(() => registerCommands());
+}
 
 /**
  * Runs automatically when user opens a new compose window.

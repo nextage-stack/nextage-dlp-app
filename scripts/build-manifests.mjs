@@ -1,5 +1,5 @@
 // scripts/build-manifests.mjs
-// Substitutes ${TOKEN} placeholders in manifest.json + manifest-legacy.xml using
+// Substitutes ${TOKEN} placeholders in manifest.json (unified/New Outlook) using
 // environment variables, writes the result to dist/. Fails the build if any
 // REPLACE-WITH- token, or unresolved ${...} token, remains in the output.
 
@@ -65,11 +65,8 @@ function main() {
   }
 
   build(resolve(ROOT, "manifest.json"), resolve(OUT_DIR, "manifest.json"), vars);
-  build(
-    resolve(ROOT, "manifest-legacy.xml"),
-    resolve(OUT_DIR, "manifest-legacy.xml"),
-    vars,
-  );
+  // The canonical XML manifest (manifest.xml) has no ${TOKEN} placeholders and is
+  // copied to dist/ by webpack, so it is intentionally NOT processed here.
 
   console.log("Manifests built with:");
   for (const [k, v] of Object.entries(vars)) {

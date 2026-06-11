@@ -259,7 +259,7 @@ function showStatus(message: string, type: StatusType): void {
 
   // Build via DOM API rather than innerHTML — message may contain user-derived
   // content (error messages bubbled from the API).
-  statusDiv.replaceChildren();
+  statusDiv.textContent = "";
   const p = document.createElement("p");
   p.style.color = color;
   p.style.fontWeight = "600";
@@ -355,7 +355,7 @@ function openDlpModal(
     : "⚠️ אזהרת DLP — שים לב לפני שליחה";
 
   // Build body via DOM API so violation text can't break out as HTML.
-  body.replaceChildren();
+  body.textContent = "";
   violations.forEach((v) => {
     const div = document.createElement("div");
     div.className = "dlp-modal-issue " + (v.severity === "BLOCK" ? "block" : "warning");

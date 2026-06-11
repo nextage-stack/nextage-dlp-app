@@ -1,15 +1,31 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ============================================================================
+  NEXTAGE DLP GUARD — AZURE-HOSTED MANIFEST
+  (loads every page from https://nextage-dlp-app-gchqasbzeqgkccf7.westeurope-01.azurewebsites.net)
+  ============================================================================
+  This manifest loads taskpane/commands/icons from the AZURE web app — no local
+  dev server (npm start) needed. Deploy this folder's dist/ to that Azure web app
+  so it serves the matching files (incl. the Classic JS runtime fix in commands.js).
+
+  It has its OWN GUID and a "(LOCAL)" display name, so it installs ALONGSIDE the
+  production add-in in Outlook without conflicting. Tell them apart by name.
+
+  Smart Alerts SendMode="Block" is honored only when this manifest is deployed via
+  the M365 Admin Center (centralized deployment), not when sideloaded.
+  ============================================================================
+-->
 <OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
            xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
            xsi:type="MailApp">
 
-  <Id>6f1c4ec6-c5e7-422c-bb14-788b5070e61e</Id>
-  <Version>5.2.0.0</Version>
+  <Id>ce4a8dba-79dd-4a0a-89e7-bf6a29f0a527</Id>
+  <Version>7.4.0.0</Version>
   <ProviderName>Nextage</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
-  <DisplayName DefaultValue="Nextage DLP Guard"/>
-  <Description DefaultValue="DLP protection for outgoing emails"/>
+  <DisplayName DefaultValue="Nextage DLP Guard (LOCAL)"/>
+  <Description DefaultValue="LOCAL dev build — loads from https://nextage-dlp-app-gchqasbzeqgkccf7.westeurope-01.azurewebsites.net"/>
   <IconUrl DefaultValue="https://nextage-dlp-app-gchqasbzeqgkccf7.westeurope-01.azurewebsites.net/assets/icon-32.png"/>
   <HighResolutionIconUrl DefaultValue="https://nextage-dlp-app-gchqasbzeqgkccf7.westeurope-01.azurewebsites.net/assets/icon-80.png"/>
   <SupportUrl DefaultValue="https://nextage.co.il"/>
@@ -44,7 +60,7 @@
 
   <DisableEntityHighlighting>false</DisableEntityHighlighting>
 
-  <!-- V1_0: toolbar button (works on older Outlook) -->
+  <!-- V1_0: DLP Guard taskpane button — works in ALL Outlook versions incl. Classic -->
   <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides" xsi:type="VersionOverridesV1_0">
     <Requirements>
       <bt:Sets DefaultMinVersion="1.3">
@@ -93,15 +109,15 @@
         <bt:Url id="Taskpane.Url" DefaultValue="https://nextage-dlp-app-gchqasbzeqgkccf7.westeurope-01.azurewebsites.net/taskpane.html"/>
       </bt:Urls>
       <bt:ShortStrings>
-        <bt:String id="GroupLabel" DefaultValue="DLP"/>
-        <bt:String id="TaskpaneButton.Label" DefaultValue="DLP Guard"/>
+        <bt:String id="GroupLabel" DefaultValue="DLP (LOCAL)"/>
+        <bt:String id="TaskpaneButton.Label" DefaultValue="DLP Guard (LOCAL)"/>
       </bt:ShortStrings>
       <bt:LongStrings>
-        <bt:String id="TaskpaneButton.Tooltip" DefaultValue="Open Nextage DLP Guard"/>
+        <bt:String id="TaskpaneButton.Tooltip" DefaultValue="Open Nextage DLP Guard — LOCAL dev build"/>
       </bt:LongStrings>
     </Resources>
 
-    <!-- V1_1: Smart Alerts — OnMessageSend blocks Outlook Send button -->
+    <!-- V1_1: Smart Alerts — blocks the native Send button when DLP detects a violation -->
     <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides/1.1" xsi:type="VersionOverridesV1_1">
       <Requirements>
         <bt:Sets DefaultMinVersion="1.12">
@@ -112,15 +128,20 @@
       <Hosts>
         <Host xsi:type="MailHost">
           <Runtimes>
-            <Runtime resid="Commands.Url" lifetime="short"/>
+            <!-- HTML runtime: Outlook on the web, on Mac, and NEW Outlook on Windows. -->
+            <Runtime resid="Commands.Url">
+              <!-- JS-only runtime: REQUIRED for event-based activation in CLASSIC Outlook on Windows. -->
+              <Override type="javascript" resid="JSRuntime.Url"/>
+            </Runtime>
           </Runtimes>
           <DesktopFormFactor>
             <FunctionFile resid="Commands.Url"/>
+
             <ExtensionPoint xsi:type="MessageComposeCommandSurface">
               <OfficeTab id="TabDefault">
-                <Group id="msgComposeDLPGroupV2">
+                <Group id="msgComposeDLPGroupV11">
                   <Label resid="GroupLabel"/>
-                  <Control xsi:type="Button" id="msgComposeDLPButtonV2">
+                  <Control xsi:type="Button" id="msgComposeDLPButtonV11">
                     <Label resid="TaskpaneButton.Label"/>
                     <Supertip>
                       <Title resid="TaskpaneButton.Label"/>
@@ -138,12 +159,14 @@
                 </Group>
               </OfficeTab>
             </ExtensionPoint>
+
             <ExtensionPoint xsi:type="LaunchEvent">
               <LaunchEvents>
-                <LaunchEvent Type="OnMessageSend" FunctionName="onMessageSend" SendMode="SoftBlock"/>
+                <LaunchEvent Type="OnMessageSend" FunctionName="onMessageSendHandler" SendMode="Block"/>
               </LaunchEvents>
               <SourceLocation resid="Commands.Url"/>
             </ExtensionPoint>
+
           </DesktopFormFactor>
         </Host>
       </Hosts>
@@ -157,13 +180,15 @@
         <bt:Urls>
           <bt:Url id="Commands.Url" DefaultValue="https://nextage-dlp-app-gchqasbzeqgkccf7.westeurope-01.azurewebsites.net/commands.html"/>
           <bt:Url id="Taskpane.Url" DefaultValue="https://nextage-dlp-app-gchqasbzeqgkccf7.westeurope-01.azurewebsites.net/taskpane.html"/>
+          <!-- JS-only runtime file for CLASSIC Outlook on Windows event-based activation. -->
+          <bt:Url id="JSRuntime.Url" DefaultValue="https://nextage-dlp-app-gchqasbzeqgkccf7.westeurope-01.azurewebsites.net/commands.js"/>
         </bt:Urls>
         <bt:ShortStrings>
-          <bt:String id="GroupLabel" DefaultValue="DLP"/>
-          <bt:String id="TaskpaneButton.Label" DefaultValue="DLP Guard"/>
+          <bt:String id="GroupLabel" DefaultValue="DLP (LOCAL)"/>
+          <bt:String id="TaskpaneButton.Label" DefaultValue="DLP Guard (LOCAL)"/>
         </bt:ShortStrings>
         <bt:LongStrings>
-          <bt:String id="TaskpaneButton.Tooltip" DefaultValue="Open Nextage DLP Guard"/>
+          <bt:String id="TaskpaneButton.Tooltip" DefaultValue="Open Nextage DLP Guard — LOCAL dev build"/>
         </bt:LongStrings>
       </Resources>
 

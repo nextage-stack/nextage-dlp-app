@@ -1,16 +1,14 @@
-// Writes audit log entries to Azure Functions proxy. Fire-and-forget — never blocks send.
+// Writes audit log entries to Azure Functions proxy. Fire-and-forget; never blocks send.
 
 import { AuditAction, AuditEntry, AuditResult } from "../models/audit.model";
 import { DLPResult, EmailData } from "../models/dlp-result.model";
 import { API_BASE_URL, API_TIMEOUT_MS, AUDIT_TTL_SECONDS } from "../shared/constants";
+import { postJson } from "../shared/http";
+import { createId } from "../shared/id";
 
 export class AuditService {
   constructor(private readonly accessToken: string) {}
 
-  /**
-   * Fire-and-forget audit write. Kicks off all entry posts and returns
-   * immediately — failures are logged via the per-entry catch handler.
-   */
   writeAudit(email: EmailData, result: DLPResult): void {
     const entries = this.buildEntries(email, result);
     entries.forEach((entry) => {
@@ -20,13 +18,9 @@ export class AuditService {
     });
   }
 
-  /**
-   * Records a "DLP service unavailable" event so coverage gaps are observable
-   * even though we fail-open. Fire-and-forget — never throws.
-   */
   recordUnavailable(reason: string, partialEmail?: Partial<EmailData>): void {
     const entry: AuditEntry = {
-      id: crypto.randomUUID(),
+      id: createId(),
       partitionKey: partialEmail?.userEmail ?? "unknown",
       timestamp: new Date().toISOString(),
       userEmail: partialEmail?.userEmail ?? "unknown",
@@ -59,7 +53,7 @@ export class AuditService {
       .filter((r) => !r.isValid)
       .map((r) => ({
         ...baseEntry,
-        id: crypto.randomUUID(),
+        id: createId(),
         action: this.mapAction(r.severity, result.shouldBlock),
         checkNumber: r.check,
         result: this.mapResult(r.severity),
@@ -69,7 +63,7 @@ export class AuditService {
 
   private mapAction(severity: string, blocked: boolean): AuditAction {
     if (severity === "BLOCK" && blocked) return "SEND_BLOCKED";
-    if (severity === "BLOCK") return "WARNING_SHOWN"; // Safe Mode: would-block became visible
+    if (severity === "BLOCK") return "WARNING_SHOWN";
     if (severity === "WARNING") return "WARNING_SHOWN";
     return "SEND_ALLOWED";
   }
@@ -86,25 +80,14 @@ export class AuditService {
   }
 
   private async postEntry(entry: AuditEntry): Promise<void> {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/audit`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${this.accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(entry),
-        signal: controller.signal,
-      });
-
-      if (!response.ok) {
-        throw new Error(`Audit API returned ${response.status}`);
-      }
-    } finally {
-      clearTimeout(timeoutId);
-    }
+    await postJson(
+      `${API_BASE_URL}/audit`,
+      {
+        Authorization: `Bearer ${this.accessToken}`,
+        "Content-Type": "application/json",
+      },
+      entry,
+      API_TIMEOUT_MS,
+    );
   }
 }
