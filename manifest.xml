@@ -24,8 +24,8 @@
   <Version>7.4.0.0</Version>
   <ProviderName>Nextage</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
-  <DisplayName DefaultValue="Nextage DLP Guard (LOCAL)"/>
-  <Description DefaultValue="LOCAL dev build — loads from https://nextage-dlp-app-gchqasbzeqgkccf7.westeurope-01.azurewebsites.net"/>
+  <DisplayName DefaultValue="Nextage DLP Guard"/>
+  <Description DefaultValue="Azure app — loads from https://nextage-dlp-app-gchqasbzeqgkccf7.westeurope-01.azurewebsites.net"/>
   <IconUrl DefaultValue="https://nextage-dlp-app-gchqasbzeqgkccf7.westeurope-01.azurewebsites.net/assets/icon-32.png"/>
   <HighResolutionIconUrl DefaultValue="https://nextage-dlp-app-gchqasbzeqgkccf7.westeurope-01.azurewebsites.net/assets/icon-80.png"/>
   <SupportUrl DefaultValue="https://nextage.co.il"/>
@@ -109,11 +109,11 @@
         <bt:Url id="Taskpane.Url" DefaultValue="https://nextage-dlp-app-gchqasbzeqgkccf7.westeurope-01.azurewebsites.net/taskpane.html"/>
       </bt:Urls>
       <bt:ShortStrings>
-        <bt:String id="GroupLabel" DefaultValue="DLP (LOCAL)"/>
-        <bt:String id="TaskpaneButton.Label" DefaultValue="DLP Guard (LOCAL)"/>
+        <bt:String id="GroupLabel" DefaultValue="DLP"/>
+        <bt:String id="TaskpaneButton.Label" DefaultValue="DLP Guard"/>
       </bt:ShortStrings>
       <bt:LongStrings>
-        <bt:String id="TaskpaneButton.Tooltip" DefaultValue="Open Nextage DLP Guard — LOCAL dev build"/>
+        <bt:String id="TaskpaneButton.Tooltip" DefaultValue="Open Nextage DLP Guard — Azure app"/>
       </bt:LongStrings>
     </Resources>
 
@@ -184,11 +184,11 @@
           <bt:Url id="JSRuntime.Url" DefaultValue="https://nextage-dlp-app-gchqasbzeqgkccf7.westeurope-01.azurewebsites.net/commands.js"/>
         </bt:Urls>
         <bt:ShortStrings>
-          <bt:String id="GroupLabel" DefaultValue="DLP (LOCAL)"/>
-          <bt:String id="TaskpaneButton.Label" DefaultValue="DLP Guard (LOCAL)"/>
+          <bt:String id="GroupLabel" DefaultValue="DLP"/>
+          <bt:String id="TaskpaneButton.Label" DefaultValue="DLP Guard"/>
         </bt:ShortStrings>
         <bt:LongStrings>
-          <bt:String id="TaskpaneButton.Tooltip" DefaultValue="Open Nextage DLP Guard — LOCAL dev build"/>
+          <bt:String id="TaskpaneButton.Tooltip" DefaultValue="Open Nextage DLP Guard — Azure app"/>
         </bt:LongStrings>
       </Resources>
 
