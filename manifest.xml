@@ -21,7 +21,7 @@
            xsi:type="MailApp">
 
   <Id>ce4a8dba-79dd-4a0a-89e7-bf6a29f0a527</Id>
-  <Version>7.4.0.0</Version>
+  <Version>7.5.0.0</Version>
   <ProviderName>Nextage</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="Nextage DLP Guard"/>
