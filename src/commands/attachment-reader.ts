@@ -7,6 +7,45 @@
 
 import { AttachmentWithHeader } from "../models/dlp-result.model";
 
+// Self-contained base64 decoder. We avoid the global atob() because Classic
+// Outlook's JS-only event runtime (OnMessageSend) does not expose it. Uses
+// Buffer when available (Node/tests) and falls back to a pure-JS implementation
+// so it runs identically in the taskpane (WebView2) and the send runtime.
+const B64_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+function decodeBase64(input: string, maxBytes: number): Uint8Array {
+  if (typeof atob === "function") {
+    const decoded = atob(input);
+    const len = Math.min(maxBytes, decoded.length);
+    const out = new Uint8Array(len);
+    for (let i = 0; i < len; i++) out[i] = decoded.charCodeAt(i);
+    return out;
+  }
+  if (typeof Buffer !== "undefined") {
+    const buf = Buffer.from(input, "base64");
+    return new Uint8Array(buf.subarray(0, Math.min(maxBytes, buf.length)));
+  }
+  // Pure-JS fallback (no atob, no Buffer) — for the JS-only send runtime.
+  const lookup = new Int16Array(256).fill(-1);
+  for (let i = 0; i < B64_CHARS.length; i++) lookup[B64_CHARS.charCodeAt(i)] = i;
+  const out: number[] = [];
+  let buffer = 0;
+  let bits = 0;
+  for (let i = 0; i < input.length && out.length < maxBytes; i++) {
+    const c = input.charCodeAt(i);
+    if (c === 61 /* '=' */) break;
+    const val = lookup[c];
+    if (val === undefined || val < 0) continue; // skip whitespace/newlines
+    buffer = (buffer << 6) | val;
+    bits += 6;
+    if (bits >= 8) {
+      bits -= 8;
+      out.push((buffer >> bits) & 0xff);
+    }
+  }
+  return new Uint8Array(out);
+}
+
 // 4 KiB is enough to (a) match every magic byte we care about, (b) read the
 // first ZIP local file header including the general-purpose-bit-flag,
 // (c) hit the leading "/Encrypt" reference for most encrypted PDFs.
@@ -74,15 +113,15 @@ function readHeaderBytes(item: Office.MessageCompose, attachmentId: string): Pro
         }
 
         try {
-          // Trim to a multiple of 4 so atob doesn't choke on partial groups.
+          // Trim to a multiple of 4 so the decoder doesn't choke on partial groups.
           const sample = value.content.slice(0, BASE64_CHARS_TO_READ);
           const aligned = sample.slice(0, sample.length - (sample.length % 4));
-          const decoded = atob(aligned);
-          const len = Math.min(HEADER_BYTES, decoded.length);
-          const bytes = new Uint8Array(len);
-          for (let i = 0; i < len; i++) {
-            bytes[i] = decoded.charCodeAt(i);
-          }
+          // NOTE: do NOT use atob() here. Classic Outlook's JS-only send runtime
+          // (OnMessageSend) has no browser globals, so atob is undefined there and
+          // the decode would throw -> magicBytes=null -> Check 1 reports the file
+          // "unverifiable" and blocks a properly-encrypted attachment. decodeBase64
+          // is self-contained and works in both runtimes.
+          const bytes = decodeBase64(aligned, HEADER_BYTES);
           resolve(bytes);
         } catch (e) {
           reject(e instanceof Error ? e : new Error(String(e)));
